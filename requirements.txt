@@ -1,0 +1,13 @@
+psycopg2
+requests
+django-redis
+gunicorn
+django-widget-tweaks
+django-allauth
+markdown
+django-filter
+pygments
+tzdata
+python-telegram-bot
+twilio
+python-dateutil

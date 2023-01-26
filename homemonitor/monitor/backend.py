@@ -1,0 +1,59 @@
+from azure.cognitiveservices.vision.computervision import ComputerVisionClient
+from azure.cognitiveservices.vision.computervision.models import VisualFeatureTypes
+from msrest.authentication import CognitiveServicesCredentials
+from PIL import Image, ImageDraw
+from . import models
+
+config = models.Config.objects.filter(id=1).values()[0]
+
+origin_path = config['origin_path']
+aux_path = config['aux_path']
+final_path = config['final_path']
+
+
+def azure_backend(backend, screnshot_name):
+    account_key = backend.account_key
+    account_name = backend.account_name
+    account_region = backend.account_region
+    resource_group = backend.resource_group
+    
+    credentials = CognitiveServicesCredentials(account_key)
+    client = ComputerVisionClient(
+        endpoint="https://" + account_region + ".api.cognitive.microsoft.com/",
+        credentials=credentials
+    )
+    screnshot_path = origin_path + '/' + screnshot_name
+    image = open(screnshot_path, 'rb')
+    remote_image_features = ['objects']
+    objects = client.analyze_image_in_stream(image, remote_image_features)
+    objects = objects.as_dict()['objects']
+    return objects
+
+def get_persons(analized_image):
+    persons = list()
+    if len(analized_image) > 0:
+        for detected_object in analized_image:
+            object_property = detected_object['object_property']
+            if 'person' in object_property:
+                persons.append(detected_object)
+    return persons
+
+def draw_rectangle(persons, screnshot_name):
+    if len(persons) > 0:
+        image = Image.open(screnshot_path)
+        image_post = ImageDraw.Draw(image)
+        for person in persons:
+           rectangle =  person['rectangle']
+           x0 = rectangle['x']
+           y0 = rectangle['y']
+           x1 = x0 + rectangle['w']
+           y1 = y0 + rectangle['h']
+           shape = [(x0, y0), (x1, y1)]
+           image_post.rectangle(shape, outline='red', width=4)
+        screnshot_path = final_path + '/' + screnshot_name
+        image.save(screnshot_path)   
+        return True
+    else:
+        return False
+
+
